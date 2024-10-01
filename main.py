@@ -46,7 +46,6 @@ def select_roi(image):
 
     scale_factor = get_scale(image)
 
-    print(scale_factor)
     width = int(image.shape[1] * scale_factor)
     height = int(image.shape[0] * scale_factor)
     resized_image = cv2.resize(image, (width, height))
