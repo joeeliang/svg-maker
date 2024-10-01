@@ -17,8 +17,36 @@ def capture_image():
     cv2.destroyAllWindows()
     return frame
 
-def select_roi(image, scale_factor=0.2):
+def get_scale(image):
+    height_image, width_image = image.shape[:2]
+    
+    image_ar = width_image / height_image
+    
+    # get monitor resolution LINUX ONLY
+    cmd = ['xrandr']
+    cmd2 = ['grep', '*']
+    p = subprocess.Popen(cmd, stdout=subprocess.PIPE)
+    p2 = subprocess.Popen(cmd2, stdin=p.stdout, stdout=subprocess.PIPE)
+    p.stdout.close()
+    
+    resolution_string, junk = p2.communicate()
+    resolution = str(resolution_string.split()[0].decode())
+    width_screen, height_screen = list(map(int, resolution.split('x')))
 
+    # ----------------------------
+    
+    if width_image <= height_image:
+        return height_screen * 0.7 / height_image
+
+    else:
+        return width_screen * 0.4 / width_image
+        
+    
+def select_roi(image):
+
+    scale_factor = get_scale(image)
+
+    print(scale_factor)
     width = int(image.shape[1] * scale_factor)
     height = int(image.shape[0] * scale_factor)
     resized_image = cv2.resize(image, (width, height))
@@ -38,7 +66,7 @@ def convert_to_pbm(input_file, output_file, threshold):
     subprocess.run(['convert', input_file, '-threshold', f'{threshold}%', output_file])
 
 def convert_to_svg(input_file, output_file):
-    subprocess.run(['potrace', '-s', '-o', output_file, input_file])
+    subprocess.run(['potrace', '-s', '--tight', '-o', output_file, input_file])
 
 def convert_to_png(input_file, output_file):
     with open(input_file, 'r') as svg_file:
@@ -84,10 +112,13 @@ def main():
 
         preview = cv2.imread(png_filename, cv2.IMREAD_UNCHANGED)
         mask = preview[:, :, 3]
-        mask = cv2.resize(mask, (int(mask.shape[1]*0.2), int(mask.shape[0]*0.2)))
-        preview = cv2.resize(preview, (int(preview.shape[1]*0.2), int(preview.shape[0]*0.2)))
+        scale_factor = get_scale(mask)
+        height_mask = int(mask.shape[0] * scale_factor)
+        width_mask = int(mask.shape[1] * scale_factor)
+        mask = cv2.resize(mask, (height_mask, width_mask) )
+        #preview = cv2.resize(preview, (int(preview.shape[1]*0.2), int(preview.shape[0]*0.2)))
         
-        cv2.imshow('Preview', preview)
+        #cv2.imshow('Preview', preview)
         cv2.imshow('mask', mask)
         k = cv2.waitKey(0)
 
